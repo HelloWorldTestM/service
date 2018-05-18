@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.async.DeferredResult;
 
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicLong;
 
 @RestController
 public class HelloController {
@@ -20,6 +21,7 @@ public class HelloController {
     private ResponseEntity error = new ResponseEntity("ERROR", HttpStatus.INTERNAL_SERVER_ERROR);
 
     Random r = new Random(1);
+    AtomicLong id = new AtomicLong(1);
 
     @RequestMapping(value = "/invoke")
     public DeferredResult<ResponseEntity> invoke() {
@@ -40,18 +42,20 @@ public class HelloController {
         ListenableFuture<org.asynchttpclient.Response> responseFuture = asyncHttpClient.executeRequest(request);
 
         Runnable callback = () -> {
+            long reid = id.getAndIncrement();
             try {
                 // 检查返回值是否正确,如果不正确返回500。有以下原因可能导致返回值不对:
                 // 1. agent解析dubbo返回数据不对
                 // 2. agent没有把request和dubbo的response对应起来
                 String value = responseFuture.get().getResponseBody();
-                if (String.valueOf(str.hashCode()).equals(value)){
+                if (String.valueOf(str.hashCode()).equals(value)) {
                     result.setResult(ok);
                 } else {
                     result.setResult(error);
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                System.err.println("error reid: " + reid);
+               // e.printStackTrace();
             }
         };
         responseFuture.addListener(callback, null);
