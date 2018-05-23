@@ -3,6 +3,8 @@ package com.alibaba.dubbo.performance.demo.consumer;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.ListenableFuture;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,13 +17,14 @@ import java.util.concurrent.atomic.AtomicLong;
 @RestController
 public class HelloController {
 
+    private static Logger logger = LoggerFactory.getLogger(HelloController.class);
+
     private AsyncHttpClient asyncHttpClient = org.asynchttpclient.Dsl.asyncHttpClient();
 
     private ResponseEntity ok = new ResponseEntity("OK", HttpStatus.OK);
     private ResponseEntity error = new ResponseEntity("ERROR", HttpStatus.INTERNAL_SERVER_ERROR);
 
     Random r = new Random(1);
-    AtomicLong id = new AtomicLong(1);
 
     @RequestMapping(value = "/invoke")
     public DeferredResult<ResponseEntity> invoke() {
@@ -38,11 +41,10 @@ public class HelloController {
                 .addFormParam("parameterTypesString", "Ljava/lang/String;")
                 .addFormParam("parameter", str)
                 .build();
-
+        // System.err.println(str.hashCode());
         ListenableFuture<org.asynchttpclient.Response> responseFuture = asyncHttpClient.executeRequest(request);
 
         Runnable callback = () -> {
-            long reid = id.getAndIncrement();
             try {
                 // 检查返回值是否正确,如果不正确返回500。有以下原因可能导致返回值不对:
                 // 1. agent解析dubbo返回数据不对
@@ -54,8 +56,8 @@ public class HelloController {
                     result.setResult(error);
                 }
             } catch (Exception e) {
-                System.err.println("error reid: " + reid);
-               // e.printStackTrace();
+                //      System.err.println("error reid: " + reqid);
+                e.printStackTrace();
             }
         };
         responseFuture.addListener(callback, null);
